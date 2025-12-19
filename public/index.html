@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Token Manager</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .card {
+      background: #ffffff;
+      padding: 25px 30px;
+      border-radius: 10px;
+      width: 340px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    .stats {
+      margin-top: 15px;
+      font-size: 15px;
+    }
+
+    #message {
+      margin-top: 12px;
+      color: red;
+      font-size: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card" id="mainCard">
+    <h2>Welcome</h2>
+    <p>This site allows only <b>5 concurrent users</b>.</p>
+
+    <div class="stats">
+      <p>Current Users: <span id="currentUsers">–</span></p>
+      <p>Available Slots: <span id="availableSlots">–</span></p>
+    </div>
+
+    <p id="message"></p>
+  </div>
+
+<script>
+  const messageEl = document.getElementById("message");
+  const mainCard = document.getElementById("mainCard");
+
+  let admitted = false;
+
+  async function enterSite() {
+    try {
+      const res = await fetch("/enter", { method: "POST" });
+
+      if (!res.ok) {
+        // Site is full
+        mainCard.innerHTML = `
+          <h2>Site at Capacity</h2>
+          <p>Please try again later.</p>
+        `;
+        return;
+      }
+
+      admitted = true;
+      fetchStatus();
+
+    } catch (err) {
+      mainCard.innerHTML = "<h2>Server unreachable</h2>";
+    }
+  }
+
+  async function fetchStatus() {
+    const res = await fetch("/status");
+    const data = await res.json();
+
+    document.getElementById("currentUsers").innerText = data.currentUsers;
+    document.getElementById("availableSlots").innerText = data.availableSlots;
+  }
+
+  // Release slot when user leaves / refreshes
+  window.addEventListener("beforeunload", () => {
+    if (admitted) {
+      navigator.sendBeacon("/leave");
+    }
+  });
+
+  // Acquire slot immediately on page load
+  enterSite();
+</script>
+
+</body>
+</html>
